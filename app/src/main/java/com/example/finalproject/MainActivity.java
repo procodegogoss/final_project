@@ -5,12 +5,18 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ListAdapter;
 import android.widget.ListView;
+import android.widget.ProgressBar;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import org.xmlpull.v1.XmlPullParser;
@@ -27,7 +33,8 @@ import java.util.HashSet;
 import java.util.Set;
 
 public class MainActivity extends AppCompatActivity {
-
+    private EditText newsEditText;
+    private Button addButton;
     private ListView newsListView;
     private NewsAdapter newsAdapter;
     private ArrayList<NewsItem> newsItems;
@@ -36,17 +43,31 @@ public class MainActivity extends AppCompatActivity {
     private static final String FAVORITES_PREFS_KEY = "favorites_prefs_key";
     private Set<String> favoritesSet;
     private int newsItemIdCounter = 0; // Incremental counter for NewsItem IDs
-
+    private ProgressBar progressBar;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
+        // Find the ProgressBar by its ID
+        progressBar = findViewById(R.id.progressBar);
         newsListView = findViewById(R.id.newsListView);
         newsItems = new ArrayList<>();
         newsAdapter = new NewsAdapter(this, newsItems);
         newsListView.setAdapter(newsAdapter);
         favoriteNewsItems = new ArrayList<>();
+        // Find the EditText and Button by their IDs
+        newsEditText = findViewById(R.id.newsEditText);
+        addButton = findViewById(R.id.addButton);
+        favoritesPrefs = getSharedPreferences(AppConstants.FAVORITES_PREFS_KEY, MODE_PRIVATE);
+        favoritesSet = favoritesPrefs.getStringSet("favorites_set", new HashSet<>());
+
+        // Set click listener for the Button
+        addButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                addNewsHeadline(); // Call method to add the entered headline
+            }
+        });
 
         // Fetch news headlines from the RSS feed
         FetchNewsTask fetchNewsTask = new FetchNewsTask();
@@ -73,6 +94,30 @@ public class MainActivity extends AppCompatActivity {
         favoritesSet = favoritesPrefs.getStringSet("favorites_set", new HashSet<>());
     }
 
+    private void addNewsHeadline() {
+        String headline = newsEditText.getText().toString().trim();
+        if (!headline.isEmpty()) {
+            // Call the method to add the headline as a NewsItem
+            addNewsItem(headline);
+
+            // Clear the EditText after adding
+            newsEditText.setText("");
+
+            // Show a Toast message to indicate that the headline is added
+            Toast.makeText(this, "Headline added: " + headline, Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void addNewsItem(String headline) {
+        // Create a new NewsItem with the entered headline (You need to implement this constructor)
+        NewsItem newsItem = new NewsItem(newsItemIdCounter, headline, "", "", "");
+        // Increment the newsItemIdCounter for the next NewsItem
+        newsItemIdCounter++;
+        // Add the NewsItem to the newsItems list
+        newsItems.add(newsItem);
+    }
+
+
     // Method to add/remove items to/from the favorites list
     private void saveFavoritesToPrefs() {
         SharedPreferences.Editor editor = favoritesPrefs.edit();
@@ -96,9 +141,41 @@ public class MainActivity extends AppCompatActivity {
         }
         saveFavoritesToPrefs();
     }
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.menu_main, menu);
+        return true;
+    }
 
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        int id = item.getItemId();
+
+        if (id == R.id.action_help) {
+            showHelpAlertDialog();
+            return true;
+        } else {
+            // Add other menu item cases if needed
+            return super.onOptionsItemSelected(item);
+        }
+    }
+
+    private void showHelpAlertDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Help");
+        builder.setMessage(getString(R.string.action_help));
+        builder.setPositiveButton("OK", null); // You can add a positive button if needed
+
+        AlertDialog alertDialog = builder.create();
+        alertDialog.show();
+    }
 
     private class FetchNewsTask extends AsyncTask<Void, Void, ArrayList<NewsItem>> {
+        @Override
+        protected void onPreExecute() {
+            // Show the progress bar before starting the task
+            progressBar.setVisibility(View.VISIBLE);
+        }
 
         @Override
         protected ArrayList<NewsItem> doInBackground(Void... voids) {
@@ -141,7 +218,8 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(MainActivity.this, "Failed to fetch news data", Toast.LENGTH_SHORT).show();
             }
 
-            // Hide progress bar or loading indicator if applicable
+            // Hide the progress bar after fetching news items
+            progressBar.setVisibility(View.GONE);
         }
 
         private ArrayList<NewsItem> parseXml(InputStream inputStream) throws XmlPullParserException, IOException {

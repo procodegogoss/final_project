@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CompoundButton;
@@ -26,9 +27,10 @@ public class NewsDetailActivity extends AppCompatActivity {
     private ToggleButton favoriteToggleButton;
     private NewsItem newsItem;
     private SharedPreferences favoritesPrefs;
-    private static final String FAVORITES_PREFS_KEY = "favorites_prefs_key";
+    public static final String FAVORITES_PREFS_KEY = "favorites_prefs_key";
     private Set<String> favoritesSet;
     private static final int OPEN_LINK_REQUEST_CODE = 1;
+    private ArrayList<NewsItem> favoriteNewsItems;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -60,7 +62,6 @@ public class NewsDetailActivity extends AppCompatActivity {
             }
         }
 
-
         // Set click listener for the open link button
         openLinkButton = findViewById(R.id.openLinkButton);
         openLinkButton.setOnClickListener(new View.OnClickListener() {
@@ -87,7 +88,67 @@ public class NewsDetailActivity extends AppCompatActivity {
                 finish();
             }
         });
+
+        // Handle click event for the "Go to My Favorites" button
+        Button goToMyFavButton = findViewById(R.id.GoToMyFavButton);
+        goToMyFavButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // Get the list of favorite news items from the shared preferences
+                favoriteNewsItems = getFavoriteNewsItems();
+
+                // Create an instance of the FavoriteNewsFragment
+                FavoriteNewsFragment favoriteNewsFragment = FavoriteNewsFragment.newInstance(1, favoriteNewsItems);
+
+                // Set the list of favorite news items in the fragment's arguments
+                Bundle args = new Bundle();
+                args.putParcelableArrayList(FavoriteNewsFragment.ARG_FAVORITE_NEWS_ITEMS, favoriteNewsItems);
+                favoriteNewsFragment.setArguments(args);
+
+                // Call the navigateToFavoriteNewsFragment() method
+                navigateToFavoriteNewsFragment();
+                Log.d("NewsDetailActivity", "Number of favorite news items: " + favoriteNewsItems.size());
+
+            }
+        });
     }
+
+    private ArrayList<NewsItem> getFavoriteNewsItems() {
+        // Retrieve the favorites from SharedPreferences
+        SharedPreferences favoritesPrefs = getSharedPreferences(FAVORITES_PREFS_KEY, MODE_PRIVATE);
+        Set<String> favoritesSet = favoritesPrefs.getStringSet("favorites_set", new HashSet<>());
+
+        // Retrieve the list of all news items from the intent
+        Intent intent = getIntent();
+        ArrayList<NewsItem> newsItems = intent.getParcelableArrayListExtra("news_items");
+
+        // Create a new list to store the favorite news items
+        ArrayList<NewsItem> favoriteNewsItems = new ArrayList<>();
+
+        // Loop through the list of all news items
+        for (NewsItem newsItem : newsItems) {
+            String newsItemId = Integer.toString(newsItem.getId());
+            // Check if the news item ID is present in the favorites set
+            if (favoritesSet.contains(newsItemId)) {
+                // Add the news item to the list of favorite news items
+                favoriteNewsItems.add(newsItem);
+            }
+        }
+
+        return favoriteNewsItems;
+    }
+
+    private void navigateToFavoriteNewsFragment() {
+        // Create the FavoriteNewsFragment instance
+        FavoriteNewsFragment favoriteNewsFragment = FavoriteNewsFragment.newInstance(1, favoriteNewsItems);
+
+        // Get the FragmentManager and start a new FragmentTransaction
+        getSupportFragmentManager().beginTransaction()
+                .replace(R.id.fragmentContainer, favoriteNewsFragment) // 'fragmentContainer' is the ID of the layout container where the fragment should be placed
+                .addToBackStack(null) // This adds the transaction to the back stack, so the user can navigate back to the previous fragment with the back button
+                .commit();
+    }
+
     // Method to find the corresponding NewsItem based on its ID
     private NewsItem findNewsItemById(ArrayList<NewsItem> newsItems, int newsItemId) {
         for (NewsItem newsItem : newsItems) {
@@ -97,6 +158,7 @@ public class NewsDetailActivity extends AppCompatActivity {
         }
         return null;
     }
+
     private void updateUI(NewsItem newsItem) {
         // Update UI with the NewsItem details
         detailTitleTextView.setText(newsItem.getTitle());

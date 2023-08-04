@@ -1,0 +1,14 @@
+<resources>
+    <string name="app_name">Final Project</string>
+    <string name="action_help">Aide</string>
+    <string name="enter_news_headline">Saisissez le titre de lactualité</string>
+    <string name="add">Ajouter</string>
+    <string name="go_to_my_favorite_news_list_page">
+Aller à ma page de liste de nouvelles préférées</string>
+    <string name="remove_from_favorite">Supprimer des favoris</string>
+    <string name="back_to_news_list_page">Retour à la liste des actualités Page</string>
+    <string name="open_link_in_browser">Ouvrir le lien dans le navigateur</string>
+    <string name="search_favorite_news">rechercher les nouvelles préférées</string>
+    <string name="search">rechercher</string>
+
+</resources>
